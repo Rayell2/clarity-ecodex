@@ -28,14 +28,31 @@
   (let (
     (eco-score (calculate-eco-score carbon-footprint recycled-materials))
   )
-    ;; Implementation
+    (asserts! (is-none (map-get? products {product-id: product-id})) err-product-exists)
+    (ok (map-set products
+      {product-id: product-id}
+      {
+        name: name,
+        manufacturer: tx-sender,
+        eco-score: eco-score,
+        carbon-footprint: carbon-footprint,
+        recycled-materials: recycled-materials,
+        verified: false
+      }
+    ))
   )
 )
 
 (define-public (verify-product (product-id uint))
   (begin
     (asserts! (is-eq tx-sender contract-owner) err-not-authorized)
-    ;; Implementation
+    (match (map-get? products {product-id: product-id})
+      product (ok (map-set products 
+        {product-id: product-id}
+        (merge product {verified: true})
+      ))
+      (err err-not-authorized)
+    )
   )
 )
 
@@ -45,5 +62,14 @@
 )
 
 (define-read-only (calculate-eco-score (carbon uint) (recycled uint))
-  ;; Implementation
+  (let
+    (
+      (carbon-score (- u100 (/ carbon u10)))
+      (recycled-score (/ recycled u1))
+    )
+    (if (> (+ carbon-score recycled-score) u100)
+      u100
+      (+ carbon-score recycled-score)
+    )
+  )
 )
